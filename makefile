@@ -6,9 +6,9 @@ HD60M_PATH=/home/rlk/Desktop/bochs/hd60M.img
 AS=nasm
 CC=gcc-4.4
 LD=ld
-LIB= -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/
-ASFLAGS= -f elf
-CFLAGS= -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes -m32
+LIB= -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/
+ASFLAGS= -f elf -g
+CFLAGS= -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes -m32 -fno-stack-protector -g
 #-Wall warning all的意思，产生尽可能多警告信息，-fno-builtin不要采用内部函数，
 #-W 会显示警告，但是只显示编译器认为会出现错误的警告
 #-Wstrict-prototypes 要求函数声明必须有参数类型，否则发出警告。-Wmissing-prototypes 必须要有函数声明，否则发出警告
@@ -21,7 +21,9 @@ OBJS=$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o \
 	$(BUILD_DIR)/interrupt.o $(BUILD_DIR)/timer.o $(BUILD_DIR)/kernel.o \
 	$(BUILD_DIR)/print.o $(BUILD_DIR)/debug.o $(BUILD_DIR)/string.o $(BUILD_DIR)/bitmap.o \
 	$(BUILD_DIR)/memory.o $(BUILD_DIR)/thread.o	$(BUILD_DIR)/list.o	$(BUILD_DIR)/switch.o \
-	$(BUILD_DIR)/sync.o	$(BUILD_DIR)/console.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o
+	$(BUILD_DIR)/sync.o	$(BUILD_DIR)/console.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o \
+	$(BUILD_DIR)/tss.o	$(BUILD_DIR)/process.o	$(BUILD_DIR)/syscall.o $(BUILD_DIR)/syscall-init.o \
+	$(BUILD_DIR)/stdio.o
 #顺序最好是调用在前，实现在后
 
 ######################编译两个启动文件的代码#####################################
@@ -75,6 +77,20 @@ $(BUILD_DIR)/keyboard.o:device/keyboard.c
 
 $(BUILD_DIR)/ioqueue.o:device/ioqueue.c
 	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/tss.o:userprog/tss.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/process.o:userprog/process.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/syscall.o:lib/user/syscall.c
+	$(CC) $(CFLAGS) -o $@ $<
+$(BUILD_DIR)/syscall-init.o:userprog/syscall-init.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/stdio.o:lib/stdio.c
+	$(CC) $(CFLAGS) -o $@ $<
 ###################编译汇编内核代码#####################################################
 $(BUILD_DIR)/kernel.o:kernel/kernel.S 
 	$(AS) $(ASFLAGS) -o $@ $<
@@ -89,7 +105,7 @@ $(BUILD_DIR)/kernel.bin:$(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 # $^表示规则中所有依赖文件的集合，如果有重复，会自动去重
 
-.PHONY:mk_dir hd clean build all boot	#定义了6个伪目标
+.PHONY:mk_dir hd clean build all boot gdb_symbol	#定义了7个伪目标
 mk_dir:
 	if [ ! -d $(BUILD_DIR) ];then mkdir $(BUILD_DIR);fi 
 #判断build文件夹是否存在，如果不存在，则创建
@@ -104,8 +120,11 @@ clean:
 #-f, --force忽略不存在的文件，从不给出提示，执行make clean就会删除build下所有文件
 
 build:$(BUILD_DIR)/kernel.bin
-	
 #执行build需要依赖kernel.bin，但是一开始没有，就会递归执行之前写好的语句编译kernel.bin
 
-all:mk_dir boot build hd
-#make all 就是依次执行mk_dir build hd
+#生成可以被GDB理解的符号表，用于GDB调试
+gdb_symbol:
+	objcopy --only-keep-debug $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/kernel.sym
+
+all:mk_dir boot build hd gdb_symbol
+#make all 就是依次执行mk_dir build hd gdb_symbol
