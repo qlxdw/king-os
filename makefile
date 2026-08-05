@@ -6,7 +6,7 @@ HD60M_PATH=/home/rlk/Desktop/bochs/hd60M.img
 AS=nasm
 CC=gcc-4.4
 LD=ld
-LIB= -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/
+LIB= -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/	-I fs/ -I shell/
 ASFLAGS= -f elf -g
 CFLAGS= -Wall $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes -m32 -fno-stack-protector -g
 #-Wall warning all的意思，产生尽可能多警告信息，-fno-builtin不要采用内部函数，
@@ -23,7 +23,9 @@ OBJS=$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o \
 	$(BUILD_DIR)/memory.o $(BUILD_DIR)/thread.o	$(BUILD_DIR)/list.o	$(BUILD_DIR)/switch.o \
 	$(BUILD_DIR)/sync.o	$(BUILD_DIR)/console.o $(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o \
 	$(BUILD_DIR)/tss.o	$(BUILD_DIR)/process.o	$(BUILD_DIR)/syscall.o $(BUILD_DIR)/syscall-init.o \
-	$(BUILD_DIR)/stdio.o
+	$(BUILD_DIR)/stdio.o $(BUILD_DIR)/stdio-kernel.o $(BUILD_DIR)/ide.o $(BUILD_DIR)/fs.o $(BUILD_DIR)/inode.o \
+	$(BUILD_DIR)/file.o $(BUILD_DIR)/dir.o $(BUILD_DIR)/fork.o	$(BUILD_DIR)/shell.o $(BUILD_DIR)/buildin_cmd.o \
+	$(BUILD_DIR)/exec.o $(BUILD_DIR)/assert.o $(BUILD_DIR)/wait_exit.o $(BUILD_DIR)/pipe.o
 #顺序最好是调用在前，实现在后
 
 ######################编译两个启动文件的代码#####################################
@@ -90,6 +92,45 @@ $(BUILD_DIR)/syscall-init.o:userprog/syscall-init.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 $(BUILD_DIR)/stdio.o:lib/stdio.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/stdio-kernel.o:lib/kernel/stdio-kernel.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/ide.o:device/ide.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/fs.o:fs/fs.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/inode.o:fs/inode.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/file.o:fs/file.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/dir.o:fs/dir.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/fork.o:userprog/fork.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/shell.o:shell/shell.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/buildin_cmd.o:shell/buildin_cmd.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/exec.o:userprog/exec.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/assert.o:lib/user/assert.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/wait_exit.o:userprog/wait_exit.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(BUILD_DIR)/pipe.o:shell/pipe.c
 	$(CC) $(CFLAGS) -o $@ $<
 ###################编译汇编内核代码#####################################################
 $(BUILD_DIR)/kernel.o:kernel/kernel.S 
